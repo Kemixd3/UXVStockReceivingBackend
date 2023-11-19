@@ -3,7 +3,7 @@ import pool from "./Services/dbService.js";
 import cors from "cors";
 import bodyParser from "body-parser";
 import fs from "fs";
-
+import UserDb from "./Controllers/UserDb.js";
 import stockDbController from "./Controllers/StockDbController.js";
 
 //require("dotenv").config();
@@ -13,6 +13,7 @@ app.use(cors());
 app.use(bodyParser.json());
 
 app.use("", stockDbController);
+app.use("/users", UserDb);
 
 const port = process.env.PORT || 3001;
 
