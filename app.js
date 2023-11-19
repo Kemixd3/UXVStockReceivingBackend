@@ -25,18 +25,6 @@ pool.getConnection((err, connection) => {
   connection.release(); // Return the connection to the pool when done.
 });
 
-app.get("/users", async (req, res) => {
-  try {
-    const rawData = await fs.promises.readFile("users.json");
-    const users = JSON.parse(rawData);
-    console.log(users);
-    res.json(users);
-  } catch (error) {
-    console.error("Error reading user data: ", error);
-    res.status(500).send("Error reading user data");
-  }
-});
-
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
