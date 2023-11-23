@@ -5,6 +5,7 @@ import bodyParser from "body-parser";
 import fs from "fs";
 import UserDb from "./Controllers/UserDb.js";
 import stockDbController from "./Controllers/StockDbController.js";
+import productOrderRoutes from "./Controllers/productOrderRoutes.js";
 
 //require("dotenv").config();
 
@@ -14,6 +15,7 @@ app.use(bodyParser.json());
 
 app.use("", stockDbController);
 app.use("/users", UserDb);
+app.use("/orders", productOrderRoutes);
 
 const port = process.env.PORT || 3001;
 

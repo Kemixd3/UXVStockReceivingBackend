@@ -42,4 +42,29 @@ UserDb.get("/users/:userid", (req, res) => {
   });
 });
 
+UserDb.patch("/users/:userid", (req, res) => {
+  const { userid } = req.params;
+  const { name, email, image } = req.body;
+
+  const UPDATE_USER_QUERY = `UPDATE users SET name = ?, email = ?, image = ? WHERE userid = ?`;
+
+  pool.query(
+    UPDATE_USER_QUERY,
+    [name, email, image, userid],
+    (err, results) => {
+      if (err) {
+        console.error("Error updating user:", err);
+        return res.status(500).json({ error: "Error updating user" });
+      }
+
+      if (results.affectedRows === 0) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      console.log("User updated successfully");
+      return res.status(200).json({ message: "User updated successfully" });
+    }
+  );
+});
+
 export default UserDb;
