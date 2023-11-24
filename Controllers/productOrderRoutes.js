@@ -4,18 +4,23 @@ import cors from "cors";
 
 const productOrderRoutes = Router();
 //const ProductOrder = require("../models/ProductOrder");
-
 productOrderRoutes.get("/product-orders", async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
+  const { page = 1, limit = 10, org } = req.query;
   const offset = (page - 1) * limit;
 
   try {
-    const [results] = await pool
-      .promise()
-      .query("SELECT * FROM Product_order LIMIT ?, ?", [
-        offset,
-        parseInt(limit),
-      ]);
+    let query = "SELECT * FROM Product_order";
+    const queryParams = [];
+
+    if (org && (org === "DK" || org === "US")) {
+      query += " WHERE organization = ?";
+      queryParams.push(org);
+    }
+
+    query += " LIMIT ?, ?";
+    queryParams.push(offset, parseInt(limit));
+
+    const [results] = await pool.promise().query(query, queryParams);
     res.json(results);
   } catch (error) {
     console.error(error);
