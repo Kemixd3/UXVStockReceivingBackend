@@ -39,21 +39,26 @@ ReceivedOrderController.post("/received-orders", async (req, res) => {
 
 //Endpoint to handle GET requests for received orders using the product_order_id
 ReceivedOrderController.get(
-  "/received-orders/:product_order_id",
+  "/received-orders/:product_order_id/:org?",
   async (req, res) => {
     try {
-      const { product_order_id } = req.params;
-      //Check if received_order already exists
-      const query = "SELECT * FROM received_order WHERE product_order_id = ?";
+      let { product_order_id, org } = req.params;
+
+      org = org || "DK";
+
+      //Check if received_order already exists for the provided organization
+      const query =
+        "SELECT * FROM received_order WHERE product_order_id = ? AND Organization = ?";
       const [receivedOrdersRows] = await pool
         .promise()
-        .query(query, [product_order_id]);
+        .query(query, [product_order_id, org]);
 
       if (receivedOrdersRows.length > 0) {
         res.status(200).json({ receivedOrders: receivedOrdersRows });
       } else {
         res.status(404).json({
-          message: "No received orders found for this product order ID",
+          message:
+            "No received orders found for this product order ID and organization",
         });
       }
     } catch (error) {
