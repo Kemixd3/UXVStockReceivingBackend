@@ -7,12 +7,28 @@ const ReceivedOrderController = Router();
 ReceivedOrderController.post("/received-orders", async (req, res) => {
   try {
     const { received_date, product_order_id, Organization } = req.body;
-    if (product_order_id != null) {
-      const query = `INSERT INTO received_order (received_date, product_order_id, Organization) VALUES (?, ?, ?)`;
 
-      await pool.query(query, [received_date, product_order_id, Organization]);
+    console.log(received_date, product_order_id, Organization);
 
-      res.status(201).json({ message: "Received order created successfully" });
+    if (product_order_id) {
+      // Check if the product_order_id exists in the product_order table
+      const checkQuery = `SELECT * FROM product_order WHERE order_id = ?`;
+      const [rows] = await pool.promise().query(checkQuery, [product_order_id]);
+
+      if (rows.length === 0) {
+        // If product_order_id doesn't exist, proceed with insertion
+        const insertQuery = `INSERT INTO received_order (received_date, product_order_id, Organization) VALUES (?, ?, ?)`;
+        await pool
+          .promise()
+          .query(insertQuery, [received_date, product_order_id, Organization]);
+
+        res
+          .status(201)
+          .json({ message: "Received order created successfully" });
+      } else {
+        // If product_order_id exists, return an error
+        res.status(400).json({ error: "Product order already exists" });
+      }
     } else {
       res.status(400).json({ error: "product_order_id is NULL" });
     }
@@ -31,7 +47,9 @@ ReceivedOrderController.get(
 
       const query = "SELECT * FROM received_order WHERE product_order_id = ?";
 
-      const receivedOrders = await pool.query(query, [product_order_id]);
+      const receivedOrders = await pool
+        .promise()
+        .query(query, [product_order_id]);
 
       res.status(200).json({ receivedOrders });
     } catch (error) {
