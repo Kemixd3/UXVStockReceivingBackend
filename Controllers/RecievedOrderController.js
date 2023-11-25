@@ -8,15 +8,14 @@ ReceivedOrderController.post("/received-orders", async (req, res) => {
   try {
     const { received_date, product_order_id, Organization } = req.body;
 
-    console.log(received_date, product_order_id, Organization);
-
     if (product_order_id) {
-      // Check if the product_order_id exists in the product_order table
-      const checkQuery = `SELECT * FROM product_order WHERE order_id = ?`;
+      //Check product_order_id exists in the product_order table
+      const checkQuery = `SELECT * FROM received_order WHERE received_order_id = ?`;
       const [rows] = await pool.promise().query(checkQuery, [product_order_id]);
 
       if (rows.length === 0) {
-        // If product_order_id doesn't exist, proceed with insertion
+        console.log("works");
+        //If product_order_id doesn't exist, proceed with insertion
         const insertQuery = `INSERT INTO received_order (received_date, product_order_id, Organization) VALUES (?, ?, ?)`;
         await pool
           .promise()
@@ -26,7 +25,7 @@ ReceivedOrderController.post("/received-orders", async (req, res) => {
           .status(201)
           .json({ message: "Received order created successfully" });
       } else {
-        // If product_order_id exists, return an error
+        //If product_order_id exists, return an error
         res.status(400).json({ error: "Product order already exists" });
       }
     } else {
@@ -44,14 +43,19 @@ ReceivedOrderController.get(
   async (req, res) => {
     try {
       const { product_order_id } = req.params;
-
+      //Check if received_order already exists
       const query = "SELECT * FROM received_order WHERE product_order_id = ?";
-
-      const receivedOrders = await pool
+      const [receivedOrdersRows] = await pool
         .promise()
         .query(query, [product_order_id]);
 
-      res.status(200).json({ receivedOrders });
+      if (receivedOrdersRows.length > 0) {
+        res.status(200).json({ receivedOrders: receivedOrdersRows });
+      } else {
+        res.status(404).json({
+          message: "No received orders found for this product order ID",
+        });
+      }
     } catch (error) {
       console.error("Error fetching received orders:", error);
       res.status(500).json({ error: "Internal server error" });
