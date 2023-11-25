@@ -44,6 +44,7 @@ productOrderRoutes.get("/product-order-items/:orderId", (req, res) => {
   });
 });
 
+//Skal slettes
 productOrderRoutes.post("/product-order-items", (req, res) => {
   const { orderId, items } = req.body; // Assuming the request body contains orderId and items array
 
@@ -56,6 +57,7 @@ productOrderRoutes.post("/product-order-items", (req, res) => {
       item.Name,
       item.Quantity,
       item.SI_number,
+      item.type_id,
       orderId, // Link the product order ID to each item
     ];
   });
