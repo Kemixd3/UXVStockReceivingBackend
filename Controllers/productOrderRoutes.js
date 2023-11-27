@@ -2,14 +2,14 @@ import { Router } from "express";
 import pool from "../Services/dbService.js";
 import cors from "cors";
 
-const productOrderRoutes = Router();
-//const ProductOrder = require("../models/ProductOrder");
-productOrderRoutes.get("/product-orders", async (req, res) => {
+const PurchaseOrderRoutes = Router();
+//const purchaseOrder = require("../models/purchaseOrder");
+PurchaseOrderRoutes.get("/purchase-orders", async (req, res) => {
   const { page = 1, limit = 10, org } = req.query;
   const offset = (page - 1) * limit;
 
   try {
-    let query = "SELECT * FROM Product_order";
+    let query = "SELECT * FROM Purchase_order";
     const queryParams = [];
 
     if (org && (org === "DK" || org === "US")) {
@@ -28,10 +28,10 @@ productOrderRoutes.get("/product-orders", async (req, res) => {
   }
 });
 
-productOrderRoutes.get("/product-order-items/:orderId", (req, res) => {
+PurchaseOrderRoutes.get("/purchase-order-items/:orderId", (req, res) => {
   const orderId = req.params.orderId;
 
-  const sql = `SELECT * FROM product_order_items WHERE order_id = ?`;
+  const sql = `SELECT * FROM purchase_order_items WHERE order_id = ?`;
 
   pool.query(sql, [orderId], (err, results) => {
     if (err) {
@@ -40,12 +40,12 @@ productOrderRoutes.get("/product-order-items/:orderId", (req, res) => {
       return;
     }
 
-    res.status(200).json({ productOrderItems: results });
+    res.status(200).json({ purchaseOrderItems: results });
   });
 });
 
 //Skal slettes
-productOrderRoutes.post("/product-order-items", (req, res) => {
+PurchaseOrderRoutes.post("/purchase-order-items", (req, res) => {
   const { orderId, items } = req.body; // Assuming the request body contains orderId and items array
 
   if (!orderId || !items || !Array.isArray(items) || items.length === 0) {
@@ -58,11 +58,11 @@ productOrderRoutes.post("/product-order-items", (req, res) => {
       item.Quantity,
       item.SI_number,
       item.type_id,
-      orderId, // Link the product order ID to each item
+      orderId, // Link the purchase order ID to each item
     ];
   });
 
-  const sql = `INSERT INTO product_order_items (Name, Quantity, SI_number, order_id) VALUES ?`;
+  const sql = `INSERT INTO purchase_order_items (Name, Quantity, SI_number, order_id) VALUES ?`;
 
   pool.query(sql, [insertQueries], (err, results) => {
     if (err) {
@@ -71,8 +71,10 @@ productOrderRoutes.post("/product-order-items", (req, res) => {
       return;
     }
 
-    res.status(201).json({ message: "Product order items added successfully" });
+    res
+      .status(201)
+      .json({ message: "Purchase order items added successfully" });
   });
 });
 
-export default productOrderRoutes;
+export default PurchaseOrderRoutes;
