@@ -6,7 +6,7 @@ import fs from "fs";
 import UserDb from "./Controllers/UserDb.js";
 import stockDbController from "./Controllers/StockDbController.js";
 import PurchaseOrderRoutes from "./Controllers/productOrderRoutes.js";
-import ReceivedOrderController from "./Controllers/RecievedOrderController.js";
+import ReceivedGoodsController from "./Controllers/RecievedGoodsController.js";
 //require("dotenv").config();
 
 const app = express();
@@ -16,7 +16,7 @@ app.use(bodyParser.json());
 app.use("", stockDbController);
 app.use("/users", UserDb);
 app.use("/orders", PurchaseOrderRoutes);
-app.use("/receiving", ReceivedOrderController);
+app.use("/receiving", ReceivedGoodsController);
 
 const port = process.env.PORT || 3001;
 
