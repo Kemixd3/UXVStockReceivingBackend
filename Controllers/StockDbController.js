@@ -22,9 +22,7 @@ stockDbController.get("/batches", async (req, res) => {
 
 stockDbController.post("/batches", async (req, res) => {
   try {
-    const { batch_name, received_date, si_id, items } = req.body;
-    const type_id = req.body.type_id; // Assuming type_id is provided
-
+    const { batch_name, received_date, si_number, createdBy, received_goods_received_goods_id, items , formData} = req.body;
     // Start a transaction to ensure data consistency
     const connection = await pool.promise().getConnection();
     await connection.beginTransaction();
@@ -32,18 +30,17 @@ stockDbController.post("/batches", async (req, res) => {
     try {
       // Insert the batch details
       const [batchResult] = await connection.query(
-        "INSERT INTO Batches (batch_name, received_date, si_id, type_id) VALUES (?, ?, ?, ?)",
-        [batch_name, received_date, si_id, type_id]
+        "INSERT INTO Batches (batch_name, received_date, si_number, createdBy, received_goods_received_goods_id) VALUES (?, ?, ?, ?, ?)",
+        [batch_name, received_date, si_number, createdBy, received_goods_received_goods_id]
       );
 
-      const batchId = batchResult.insertId;
 
       // Insert items associated with the batch
       for (const item of items) {
-        const { item_name, quantity, received_date } = item;
+        console.log(item, formData.Quantity, received_date, "dk", formData.item_type);
         await connection.query(
-          "INSERT INTO Items (item_name, quantity, received_date, batch_id) VALUES (?, ?, ?, ?)",
-          [item_name, quantity, received_date, batchId]
+          "INSERT INTO material (item_name, quantity, received_date, Organization, item_type) VALUES (?, ?, ?, ?,?)",
+          [item, formData.Quantity, received_date, "dk", formData.item_type]
         );
       }
 
@@ -64,11 +61,12 @@ stockDbController.post("/batches", async (req, res) => {
   }
 });
 
-// GET all batches with their item types and items
+
+
 stockDbController.get("/allBatches", async (req, res) => {
   try {
     const sql = `
-        SELECT b.batch_id, b.batch_name, b.received_date, b.si_id, t.type_name,
+        SELECT b.batch_id, b.batch_name, b.received_date, b.si_number, t.type_name,
                i.item_id, i.item_name, i.quantity, i.received_date AS item_received_date
         FROM batches b
         JOIN itemtypes t ON b.type_id = t.type_id
@@ -79,7 +77,7 @@ stockDbController.get("/allBatches", async (req, res) => {
 
     // Group batches with their items
     const groupedBatches = results.reduce((acc, row) => {
-      const { batch_id, batch_name, received_date, si_id, type_name } = row;
+      const { batch_id, batch_name, received_date, si_number, type_name } = row;
       const { item_id, item_name, quantity, item_received_date } = row;
 
       const batchIndex = acc.findIndex((batch) => batch.batch_id === batch_id);
@@ -89,7 +87,7 @@ stockDbController.get("/allBatches", async (req, res) => {
           batch_id,
           batch_name,
           received_date,
-          si_id,
+          si_number,
           type_name,
           items: item_id
             ? [{ item_id, item_name, quantity, item_received_date }]
@@ -115,5 +113,24 @@ stockDbController.get("/allBatches", async (req, res) => {
       .json({ error: "Error fetching and organizing batches with items" });
   }
 });
+
+
+
+stockDbController.get("/batchAll", async (req, res) => {
+  try {
+      const sql = `
+          SELECT *
+          FROM batches;`;
+
+      const [results] = await pool.promise().query(sql);
+
+      res.status(200).json(results);
+  } catch (error) {
+      console.error("Error fetching batches:", error);
+      res.status(500).json({ error: "Error fetching batches" });
+  }
+});
+
+
 
 export default stockDbController;
