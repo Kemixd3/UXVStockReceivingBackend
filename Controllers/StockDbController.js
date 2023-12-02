@@ -22,7 +22,14 @@ stockDbController.get("/batches", async (req, res) => {
 
 stockDbController.post("/batches", async (req, res) => {
   try {
+
+
+
     const { batch_name, received_date, si_number, createdBy, received_goods_received_goods_id, items , formData} = req.body;
+
+
+
+
     // Start a transaction to ensure data consistency
     const connection = await pool.promise().getConnection();
     await connection.beginTransaction();
@@ -36,13 +43,8 @@ stockDbController.post("/batches", async (req, res) => {
 
 
       // Insert items associated with the batch
-      for (const item of items) {
-        console.log(item, formData.Quantity, received_date, "dk", formData.item_type);
-        await connection.query(
-          "INSERT INTO material (item_name, quantity, received_date, Organization, item_type) VALUES (?, ?, ?, ?,?)",
-          [item, formData.Quantity, received_date, "dk", formData.item_type]
-        );
-      }
+
+      
 
       await connection.commit(); // Commit the transaction
       connection.release(); // Release the connection
@@ -61,7 +63,22 @@ stockDbController.post("/batches", async (req, res) => {
   }
 });
 
-
+stockDbController.get("/batches/:receivedGoodsId", (req, res) => {
+  const receivedGoodsId = req.params.receivedGoodsId;
+  console.log(receivedGoodsId);
+  pool.query(
+    "SELECT * FROM batches WHERE received_goods_received_goods_id = ?",
+    [receivedGoodsId],
+    (err, results) => {
+      if (err) {
+        console.error("Error fetching batches:", err);
+        res.status(500).json({ error: "Error fetching batches" });
+        return;
+      }
+      res.status(200).json(results);
+    }
+  );
+});
 
 stockDbController.get("/allBatches", async (req, res) => {
   try {

@@ -39,6 +39,35 @@ ReceivedGoodsController.post("/received-goods", async (req, res) => {
   }
 });
 
+
+ReceivedGoodsController.post("/received_goods_items", async (req, res) => {
+  try {
+
+
+    // Extract data from the request body
+    const {
+      received_goods_id,
+      name,
+      quantity,
+      si_number,
+    } = req.body;
+
+    // Assuming you have a database connection, you can save the data to the database
+    const query = `INSERT INTO received_goods_items (received_goods_id, Name, Quantity, SI_number, is_batch) VALUES (?, ?, ?, ?, ?)`;
+
+    // Use the connection pool to execute the query
+    await pool.promise().execute(query, [received_goods_id, name, quantity, si_number, "1"]);
+
+    // Send a success response
+    res.status(200).json({ message: 'Received goods item posted successfully' });
+  } catch (error) {
+    // Handle any errors that occur during processing
+    console.error("Error:", error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
 //Endpoint to handle GET requests for received goods using the purchase_order_id
 ReceivedGoodsController.get(
   "/received-goods/:purchase_order_id/:org?",
