@@ -68,6 +68,39 @@ ReceivedGoodsController.post("/received_goods_items", async (req, res) => {
 });
 
 
+ReceivedGoodsController.get("/received_goods_items/:received_goods_id/:si_number", async (req, res) => {
+  try {
+    // Extract data from the request query parameters
+    const { received_goods_id, si_number } = req.query;
+
+    // Validate the presence of required parameters
+    if (!received_goods_id || !si_number) {
+      return res.status(400).json({ error: "Missing required parameters" });
+    }
+
+    // Fetch items from the received_goods_items table
+    const query =
+      "SELECT * FROM received_goods_items WHERE received_goods_id = ? AND si_number = ?";
+    const [itemsRows] = await pool.promise().query(query, [
+      received_goods_id,
+      si_number,
+    ]);
+
+    // Check if items were found
+    if (itemsRows.length > 0) {
+      res.status(200).json({ receivedGoodsItems: itemsRows });
+    } else {
+      res.status(404).json({
+        message: "No received goods items found for the provided parameters",
+      });
+    }
+  } catch (error) {
+    console.error("Error fetching received goods items:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
 //Endpoint to handle GET requests for received goods using the purchase_order_id
 ReceivedGoodsController.get(
   "/received-goods/:purchase_order_id/:org?",
