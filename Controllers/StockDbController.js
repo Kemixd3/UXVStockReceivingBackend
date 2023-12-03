@@ -25,8 +25,8 @@ stockDbController.post("/batches", async (req, res) => {
 
 
 
-    const { batch_name, received_date, si_number, createdBy, received_goods_received_goods_id, items , formData} = req.body;
-
+    const { batch_name, received_date, si_number, createdBy, received_goods_received_goods_id} = req.body;
+    console.log(batch_name, received_date, si_number, createdBy, received_goods_received_goods_id);
 
 
 
@@ -65,7 +65,6 @@ stockDbController.post("/batches", async (req, res) => {
 
 stockDbController.get("/batches/:receivedGoodsId", (req, res) => {
   const receivedGoodsId = req.params.receivedGoodsId;
-  console.log(receivedGoodsId);
   pool.query(
     "SELECT * FROM batches WHERE received_goods_received_goods_id = ?",
     [receivedGoodsId],
