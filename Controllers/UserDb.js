@@ -42,6 +42,27 @@ UserDb.get("/users/:userid", (req, res) => {
   });
 });
 
+UserDb.get("/usersFromEmail/:useremail", (req, res) => {
+  const { useremail } = req.params;
+  console.log(useremail, "PLSSSSSS");
+
+  const SELECT_USER_QUERY = `SELECT * FROM users WHERE email = ?`;
+
+  pool.query(SELECT_USER_QUERY, [useremail], (err, results) => {
+    if (err) {
+      console.error("Error fetching user:", err);
+      return res.status(500).json({ error: "Error fetching user" });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const user = results[0]; // Assuming there's only one user for a given userid
+    return res.status(200).json({ user });
+  });
+});
+
 UserDb.patch("/users/:userid", (req, res) => {
   const { userid } = req.params;
   const { name, email, image } = req.body;
