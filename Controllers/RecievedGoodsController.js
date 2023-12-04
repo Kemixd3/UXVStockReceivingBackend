@@ -39,50 +39,31 @@ ReceivedGoodsController.post("/received-goods", async (req, res) => {
   }
 });
 
-ReceivedGoodsController.post("/received_goods_items", async (req, res) => {
-  try {
-    // Extract data from the request body
-    const { received_goods_id, name, quantity, si_number } = req.body;
-
-    // Assuming you have a database connection, you can save the data to the database
-    const query = `INSERT INTO received_goods_items (received_goods_id, Name, Quantity, SI_number, is_batch) VALUES (?, ?, ?, ?, ?)`;
-
-    // Use the connection pool to execute the query
-    await pool
-      .promise()
-      .execute(query, [received_goods_id, name, quantity, si_number, "1"]);
-
-    // Send a success response
-    res
-      .status(200)
-      .json({ message: "Received goods item posted successfully" });
-  } catch (error) {
-    // Handle any errors that occur during processing
-    console.error("Error:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
 ReceivedGoodsController.get(
-  "/received_goods_items/:received_goods_id/:si_number",
+  "/received_goods_items/:batch_id/:si_number",
   async (req, res) => {
     try {
-      // Extract data from the request query parameters
-      const { received_goods_id, si_number } = req.query;
-
-      // Validate the presence of required parameters
-      if (!received_goods_id || !si_number) {
+      const { batch_id, si_number } = req.params;
+      console.log(batch_id, si_number);
+      //Validate parameters
+      if (!batch_id || !si_number) {
         return res.status(400).json({ error: "Missing required parameters" });
       }
 
-      // Fetch items from the received_goods_items table
+      //Fetch from the received_goods_items table joined with batches table
       const query =
-        "SELECT * FROM received_goods_items WHERE received_goods_id = ? AND si_number = ?";
+        "SELECT received_goods_items.* FROM received_goods_items " +
+        "INNER JOIN batches_has_received_goods_items ON " +
+        "received_goods_items.received_item_id = batches_has_received_goods_items.received_goods_items_received_item_id " +
+        "INNER JOIN batches ON " +
+        "batches.batch_id = batches_has_received_goods_items.batches_batch_id " +
+        "WHERE batches.batch_id = ? AND received_goods_items.SI_number = ?";
+
       const [itemsRows] = await pool
         .promise()
-        .query(query, [received_goods_id, si_number]);
+        .query(query, [batch_id, si_number]);
 
-      // Check if items were found
+      //Check if items found
       if (itemsRows.length > 0) {
         res.status(200).json({ receivedGoodsItems: itemsRows });
       } else {
@@ -203,5 +184,70 @@ ReceivedGoodsController.get(
     }
   }
 );
+
+ReceivedGoodsController.post("/received_goods_items", async (req, res) => {
+  try {
+    // Extract data from the request body
+    const { batch_id, receivedGoodsItems } = req.body;
+
+    // Validate the presence of required parameters
+    if (
+      !batch_id ||
+      !receivedGoodsItems ||
+      !Array.isArray(receivedGoodsItems)
+    ) {
+      return res.status(400).json({ error: "Missing or invalid parameters" });
+    }
+
+    // Get a connection from the pool
+    const connection = await pool.promise().getConnection();
+
+    try {
+      // Begin a transaction
+      await connection.beginTransaction();
+
+      for (const item of receivedGoodsItems) {
+        const { Name, Quantity, SI_number, createdBy } = item;
+
+        // Insert item into received_goods_items table
+        const insertItemQuery =
+          "INSERT INTO received_goods_items (Name, Quantity, SI_number, createdBy) VALUES (?, ?, ?, ?)";
+        const [insertItemResult] = await connection.query(insertItemQuery, [
+          Name,
+          Quantity,
+          SI_number,
+          createdBy,
+        ]);
+
+        const receivedItemId = insertItemResult.insertId;
+
+        // Insert into join table batches_has_received_goods_items
+        const insertIntoJoinTableQuery =
+          "INSERT INTO batches_has_received_goods_items (batches_batch_id, received_goods_items_received_item_id) VALUES (?, ?)";
+        await connection.query(insertIntoJoinTableQuery, [
+          batch_id,
+          receivedItemId,
+        ]);
+      }
+
+      // Commit the transaction
+      await connection.commit();
+
+      res.status(201).json({
+        message: "Received goods items added to the batch successfully",
+      });
+    } catch (error) {
+      // Rollback transaction in case of an error
+      await connection.rollback();
+      throw error;
+    } finally {
+      // Release the connection back to the pool
+      connection.release();
+    }
+  } catch (error) {
+    console.error("Error adding received goods items:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 export default ReceivedGoodsController;
