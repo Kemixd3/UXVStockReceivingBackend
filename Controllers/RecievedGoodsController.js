@@ -207,16 +207,18 @@ ReceivedGoodsController.post("/received_goods_items", async (req, res) => {
       await connection.beginTransaction();
 
       for (const item of receivedGoodsItems) {
-        const { Name, Quantity, SI_number, createdBy } = item;
+        const { Name, Quantity, SI_number, createdBy, received_goods_id } =
+          item;
 
         // Insert item into received_goods_items table
         const insertItemQuery =
-          "INSERT INTO received_goods_items (Name, Quantity, SI_number, createdBy) VALUES (?, ?, ?, ?)";
+          "INSERT INTO received_goods_items (Name, Quantity, SI_number, createdBy, received_goods_id) VALUES (?, ?, ?, ?, ?)";
         const [insertItemResult] = await connection.query(insertItemQuery, [
           Name,
           Quantity,
           SI_number,
           createdBy,
+          received_goods_id,
         ]);
 
         const receivedItemId = insertItemResult.insertId;
@@ -250,53 +252,56 @@ ReceivedGoodsController.post("/received_goods_items", async (req, res) => {
   }
 });
 
-
-
-
-ReceivedGoodsController.put("/received_goods_items/:received_item_id", async (req, res) => {
-  try {
-    const receivedItemId = req.params.received_item_id;
-    const { Name, Quantity, SI_number, createdBy } = req.body;
-
-    // Validate the presence of required parameters
-    if (!Name || !Quantity || !SI_number || !createdBy) {
-      return res.status(400).json({ error: "Missing or invalid parameters" });
-    }
-
-    // Get a connection from the pool
-    const connection = await pool.promise().getConnection();
-
+ReceivedGoodsController.put(
+  "/received_goods_items/:received_item_id",
+  async (req, res) => {
     try {
-      // Begin a transaction
-      await connection.beginTransaction();
+      const receivedItemId = req.params.received_item_id;
+      const { Name, Quantity, SI_number, createdBy } = req.body;
 
-      // Update item in received_goods_items table
-      const updateItemQuery =
-        "UPDATE received_goods_items SET Name = ?, Quantity = ?, SI_number = ?, createdBy = ? WHERE received_item_id = ?";
-      await connection.query(updateItemQuery, [Name, Quantity, SI_number, createdBy, receivedItemId]);
+      // Validate the presence of required parameters
+      if (!Name || !Quantity || !SI_number || !createdBy) {
+        return res.status(400).json({ error: "Missing or invalid parameters" });
+      }
 
-      // Commit the transaction
-      await connection.commit();
+      // Get a connection from the pool
+      const connection = await pool.promise().getConnection();
 
-      res.status(200).json({ message: "Received goods item updated successfully" });
+      try {
+        // Begin a transaction
+        await connection.beginTransaction();
+
+        // Update item in received_goods_items table
+        const updateItemQuery =
+          "UPDATE received_goods_items SET Name = ?, Quantity = ?, SI_number = ?, createdBy = ? WHERE received_item_id = ?";
+        await connection.query(updateItemQuery, [
+          Name,
+          Quantity,
+          SI_number,
+          createdBy,
+          receivedItemId,
+        ]);
+
+        // Commit the transaction
+        await connection.commit();
+
+        res
+          .status(200)
+          .json({ message: "Received goods item updated successfully" });
+      } catch (error) {
+        // Rollback transaction in case of an error
+        await connection.rollback();
+        throw error;
+      } finally {
+        // Release the connection back to the pool
+        connection.release();
+      }
     } catch (error) {
-      // Rollback transaction in case of an error
-      await connection.rollback();
-      throw error;
-    } finally {
-      // Release the connection back to the pool
-      connection.release();
+      console.error("Error updating received goods item:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
-  } catch (error) {
-    console.error("Error updating received goods item:", error);
-    res.status(500).json({ error: "Internal server error" });
   }
-});
-
-
-
-
-
+);
 
 ReceivedGoodsController.delete(
   "/received_goods_items/:received_item_id",
@@ -355,7 +360,3 @@ ReceivedGoodsController.delete(
 );
 
 export default ReceivedGoodsController;
-
-
-
-
