@@ -298,6 +298,62 @@ ReceivedGoodsController.put("/received_goods_items/:received_item_id", async (re
 
 
 
+ReceivedGoodsController.delete(
+  "/received_goods_items/:received_item_id",
+  async (req, res) => {
+    try {
+      // Extract received_item_id from the request parameters
+      const { received_item_id } = req.params;
+
+      // Validate the presence of required parameter
+      if (!received_item_id) {
+        return res
+          .status(400)
+          .json({ error: "Missing received_item_id parameter" });
+      }
+
+      // Begin a transaction to ensure atomicity
+      const connection = await pool.promise().getConnection();
+      await connection.beginTransaction();
+
+      try {
+        // Delete entry from batches_has_received_goods_items
+        const deleteFromJoinTableQuery =
+          "DELETE FROM batches_has_received_goods_items WHERE received_goods_items_received_item_id = ?";
+        await connection.query(deleteFromJoinTableQuery, [received_item_id]);
+
+        // Delete received_goods_items entry
+        const deleteItemQuery =
+          "DELETE FROM received_goods_items WHERE received_item_id = ?";
+        const [deleteResult] = await connection.query(deleteItemQuery, [
+          received_item_id,
+        ]);
+
+        // Check if the delete operation was successful
+        if (deleteResult.affectedRows > 0) {
+          // Commit the transaction
+          await connection.commit();
+          res
+            .status(200)
+            .json({ message: "Received goods item deleted successfully" });
+        } else {
+          throw new Error("Received goods item not found");
+        }
+      } catch (error) {
+        // Rollback transaction in case of an error
+        await connection.rollback();
+        throw error;
+      } finally {
+        // Release the connection back to the pool
+        connection.release();
+      }
+    } catch (error) {
+      console.error("Error deleting received goods item:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
 export default ReceivedGoodsController;
 
 
