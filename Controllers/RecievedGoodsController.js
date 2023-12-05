@@ -250,4 +250,56 @@ ReceivedGoodsController.post("/received_goods_items", async (req, res) => {
   }
 });
 
+
+
+
+ReceivedGoodsController.put("/received_goods_items/:received_item_id", async (req, res) => {
+  try {
+    const receivedItemId = req.params.received_item_id;
+    const { Name, Quantity, SI_number, createdBy } = req.body;
+
+    // Validate the presence of required parameters
+    if (!Name || !Quantity || !SI_number || !createdBy) {
+      return res.status(400).json({ error: "Missing or invalid parameters" });
+    }
+
+    // Get a connection from the pool
+    const connection = await pool.promise().getConnection();
+
+    try {
+      // Begin a transaction
+      await connection.beginTransaction();
+
+      // Update item in received_goods_items table
+      const updateItemQuery =
+        "UPDATE received_goods_items SET Name = ?, Quantity = ?, SI_number = ?, createdBy = ? WHERE received_item_id = ?";
+      await connection.query(updateItemQuery, [Name, Quantity, SI_number, createdBy, receivedItemId]);
+
+      // Commit the transaction
+      await connection.commit();
+
+      res.status(200).json({ message: "Received goods item updated successfully" });
+    } catch (error) {
+      // Rollback transaction in case of an error
+      await connection.rollback();
+      throw error;
+    } finally {
+      // Release the connection back to the pool
+      connection.release();
+    }
+  } catch (error) {
+    console.error("Error updating received goods item:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+
+
+
+
+
 export default ReceivedGoodsController;
+
+
+
+
