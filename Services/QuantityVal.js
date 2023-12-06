@@ -1,14 +1,17 @@
-
-
 import pool from "./dbService.js";
 
-async function getQuantity(received_goods_id, si_number, quantity,received_item_id) {
-    try {
-      if (!received_goods_id || !si_number) {
-        throw new Error("Missing required parameters");
-      }
+async function getQuantity(
+  received_goods_id,
+  si_number,
+  quantity,
+  received_item_id
+) {
+  try {
+    if (!received_goods_id || !si_number) {
+      throw new Error("Missing required parameters");
+    }
 
-      const query = `
+    const query = `
       SELECT 
       received_goods_items.SI_number,
       received_goods_items.received_goods_id,
@@ -28,29 +31,29 @@ async function getQuantity(received_goods_id, si_number, quantity,received_item_
   GROUP BY received_goods_items.SI_number, received_goods_items.received_goods_id;
   
     `;
-      
-      const [result] = await pool.promise().query(query, [received_goods_id, si_number,received_item_id]);
 
-      if (result.length > 0) {
-        var { totalQuantity, orderQuantity } = result[0];
+    const [result] = await pool
+      .promise()
+      .query(query, [received_goods_id, si_number, received_item_id]);
 
-        // Convert to integers
-        totalQuantity = parseInt(totalQuantity, 10);
-        orderQuantity = parseInt(orderQuantity, 10);
-        
-        totalQuantity = totalQuantity + quantity;
-        
-        const isAboveOrderQuantity = totalQuantity > orderQuantity;
-        
-        return { totalQuantity, orderQuantity, isAboveOrderQuantity };
-        
+    if (result.length > 0) {
+      var { totalQuantity, orderQuantity } = result[0];
 
-      } else {
-        throw new Error("No matching items found for the provided parameters");
-      }
-    } catch (error) {
-      console.error("Error fetching matching items:", error);
-      throw error;
+      // Convert to integers
+      totalQuantity = parseInt(totalQuantity, 10);
+      orderQuantity = parseInt(orderQuantity, 10);
+
+      totalQuantity = totalQuantity + quantity;
+
+      const isAboveOrderQuantity = totalQuantity > orderQuantity;
+
+      return { totalQuantity, orderQuantity, isAboveOrderQuantity };
+    } else {
+      throw new Error("No matching items found for the provided parameters");
     }
+  } catch (error) {
+    console.error("Error fetching matching items:", error);
+    throw error;
   }
-export { getQuantity };
+}
+export default getQuantity;
