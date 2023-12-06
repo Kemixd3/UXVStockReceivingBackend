@@ -262,9 +262,9 @@ ReceivedGoodsController.post("/received_goods_items", async (req, res) => {
 ReceivedGoodsController.put("/received_goods_items/:received_item_id", async (req, res) => {
   try {
     const receivedItemId = req.params.received_item_id;
-    const { Name, Quantity, SI_number, createdBy , QuantityPO,received_goods_id} = req.body;
+    const { Name, Quantity, SI_number, createdBy , QuantityPO,received_goods_id,received_item_id} = req.body;
     
-    const CheckQuantity = await getQuantity(received_goods_id, SI_number, Quantity);
+    const CheckQuantity = await getQuantity(received_goods_id, SI_number, Quantity,received_item_id);
     if (CheckQuantity.isAboveOrderQuantity == false){
 
       
