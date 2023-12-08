@@ -8,6 +8,8 @@ import stockDbController from "./Controllers/StockDbController.js";
 import PurchaseOrderRoutes from "./Controllers/productOrderRoutes.js";
 import ReceivedGoodsController from "./Controllers/RecievedGoodsController.js";
 import BatchesController from "./Controllers/BatchesController.js";
+import SearchController from "./Controllers/searchController.js";
+
 //require("dotenv").config();
 
 const app = express();
@@ -19,6 +21,7 @@ app.use("/users", UserDb);
 app.use("/orders", PurchaseOrderRoutes);
 app.use("/receiving", ReceivedGoodsController);
 app.use("/batches", BatchesController);
+app.use("/search", SearchController);
 
 const port = process.env.PORT || 3001;
 
