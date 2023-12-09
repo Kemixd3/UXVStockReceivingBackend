@@ -3,7 +3,7 @@ import pool from "../Services/dbService.js";
 import cors from "cors";
 const UserDb = Router();
 import axios from "axios";
-import { verifyToken, generateAccessToken } from "../Services/AuthService.js";
+import { verifyToken } from "../Services/AuthService.js";
 import jwt from "jsonwebtoken";
 UserDb.get("/usersFromEmail/:useremail", async (req, res) => {
   const { useremail } = req.params;

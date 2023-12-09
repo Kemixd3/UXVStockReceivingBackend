@@ -50,4 +50,4 @@ async function verifyToken(req, res, next) {
   }
 }
 
-export { verifyToken, generateAccessToken };
+export { verifyToken };
