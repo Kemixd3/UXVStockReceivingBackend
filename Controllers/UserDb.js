@@ -9,39 +9,51 @@ UserDb.get("/usersFromEmail/:useremail", async (req, res) => {
   const { useremail } = req.params;
 
   try {
+    // Fetch the user data based on the email from the database
     const SELECT_USER_QUERY = `SELECT * FROM users WHERE email = ?`;
-    const [results] = await pool
+    const [userResults] = await pool
       .promise()
       .query(SELECT_USER_QUERY, [useremail]);
+    const user = userResults.length ? userResults[0] : null;
 
-    if (results.length === 0) {
+    if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const user = results[0]; // Assuming there's only one user for a given email
+    // Extract the token from the request headers or wherever it's stored
+    const token = req.headers.authorization?.split(" ")[1]; // Extract token from Authorization header
 
-    // Generate a signed JWT token using the user's email
+    if (!token) {
+      return res.status(401).json({ message: "Token not found" });
+    }
 
-    console.log("MY SECRET", process.env.TOKEN_SECRET);
-    const token = jwt.sign(
-      {
-        email: user.email,
-      },
-      process.env.TOKEN_SECRET,
-      {
-        expiresIn: "5hr",
+    // Verify the token to check if it's valid or expired
+    jwt.verify(token, process.env.TOKEN_SECRET, async (err, decoded) => {
+      if (err) {
+        // Token is invalid or expired, generate a new token for the user
+        const newToken = jwt.sign(
+          {
+            email: useremail,
+          },
+          process.env.TOKEN_SECRET,
+          {
+            expiresIn: "5hr",
+          }
+        );
+
+        return res
+          .status(200)
+          .json({ message: "New token generated", user, token: newToken });
+      } else {
+        // Token is valid
+        return res.status(200).json({ message: "Token is valid", user });
       }
-    );
-
-    console.log(jwt.decode(token, { complete: true }), "YEEEEEEEEEEEEEEEEE");
-    // Send the user information and the generated token in the response
-    return res.status(200).json({ user, token });
+    });
   } catch (err) {
     console.error("Error fetching user:", err);
     return res.status(500).json({ error: "Error fetching user" });
   }
 });
-
 UserDb.get("/users/:userid", verifyToken, (req, res) => {
   const { userid } = req.params;
 
