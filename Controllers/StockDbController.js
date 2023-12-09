@@ -68,28 +68,23 @@ stockDbController.post("/batches", verifyToken, async (req, res) => {
   }
 });
 
-stockDbController.get(
-  "/batches/:receivedGoodsId/:si_number",
-  verifyToken,
-  (req, res) => {
-    const receivedGoodsId = req.params.receivedGoodsId;
-    const siNumber = req.params.si_number;
+stockDbController.get("/batches/:si_number", verifyToken, (req, res) => {
+  const siNumber = req.params.si_number;
 
-    //filter batches by both received_goods_received_goods_id and si_number
-    pool.query(
-      "SELECT * FROM batches WHERE received_goods_received_goods_id = ? AND si_number = ?",
-      [receivedGoodsId, siNumber],
-      (err, results) => {
-        if (err) {
-          console.error("Error fetching batches:", err);
-          res.status(500).json({ error: "Error fetching batches" });
-          return;
-        }
-        res.status(200).json(results);
+  //filter batches by si_number
+  pool.query(
+    "SELECT * FROM batches WHERE si_number = ?",
+    [siNumber],
+    (err, results) => {
+      if (err) {
+        console.error("Error fetching batches:", err);
+        res.status(500).json({ error: "Error fetching batches" });
+        return;
       }
-    );
-  }
-);
+      res.status(200).json(results);
+    }
+  );
+});
 
 stockDbController.get("/allBatches", verifyToken, async (req, res) => {
   try {
