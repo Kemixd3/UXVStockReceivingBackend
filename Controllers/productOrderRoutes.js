@@ -1,10 +1,11 @@
 import { Router } from "express";
 import pool from "../Services/dbService.js";
 import cors from "cors";
+import { verifyToken } from "../Services/AuthService.js";
 
 const PurchaseOrderRoutes = Router();
 //const purchaseOrder = require("../models/purchaseOrder");
-PurchaseOrderRoutes.get("/purchase-orders", async (req, res) => {
+PurchaseOrderRoutes.get("/purchase-orders", verifyToken, async (req, res) => {
   const { page = 1, limit = 10, org } = req.query;
   const offset = (page - 1) * limit;
 
@@ -28,24 +29,28 @@ PurchaseOrderRoutes.get("/purchase-orders", async (req, res) => {
   }
 });
 
-PurchaseOrderRoutes.get("/purchase-order-items/:orderId", (req, res) => {
-  const orderId = req.params.orderId;
+PurchaseOrderRoutes.get(
+  "/purchase-order-items/:orderId",
+  verifyToken,
+  (req, res) => {
+    const orderId = req.params.orderId;
 
-  const sql = `SELECT * FROM purchase_order_items WHERE order_id = ?`;
+    const sql = `SELECT * FROM purchase_order_items WHERE order_id = ?`;
 
-  pool.query(sql, [orderId], (err, results) => {
-    if (err) {
-      console.error("Error executing MySQL query:", err);
-      res.status(500).json({ error: "Internal server error" });
-      return;
-    }
+    pool.query(sql, [orderId], (err, results) => {
+      if (err) {
+        console.error("Error executing MySQL query:", err);
+        res.status(500).json({ error: "Internal server error" });
+        return;
+      }
 
-    res.status(200).json({ purchaseOrderItems: results });
-  });
-});
+      res.status(200).json({ purchaseOrderItems: results });
+    });
+  }
+);
 
 //Skal slettes
-PurchaseOrderRoutes.post("/purchase-order-items", (req, res) => {
+PurchaseOrderRoutes.post("/purchase-order-items", verifyToken, (req, res) => {
   const { orderId, items } = req.body; // Assuming the request body contains orderId and items array
 
   if (!orderId || !items || !Array.isArray(items) || items.length === 0) {

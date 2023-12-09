@@ -2,27 +2,47 @@ import { Router } from "express";
 import pool from "../Services/dbService.js";
 import cors from "cors";
 const UserDb = Router();
+import axios from "axios";
+import { verifyToken, generateAccessToken } from "../Services/AuthService.js";
+import jwt from "jsonwebtoken";
+UserDb.get("/usersFromEmail/:useremail", async (req, res) => {
+  const { useremail } = req.params;
 
-UserDb.post("/post", (req, res) => {
-  const { userid, name, email, image } = req.body;
-  const INSERT_USER_QUERY = `INSERT INTO users (userid, name, email, image) VALUES (?, ?, ?, ?)`;
+  try {
+    const SELECT_USER_QUERY = `SELECT * FROM users WHERE email = ?`;
+    const [results] = await pool
+      .promise()
+      .query(SELECT_USER_QUERY, [useremail]);
 
-  pool.query(
-    INSERT_USER_QUERY,
-    [userid, name, email, image],
-    (err, results) => {
-      if (err) {
-        console.error("Error creating user:", err);
-        return res.status(500).json({ error: "Error creating user" });
-      }
-
-      console.log("User created successfully");
-      return res.status(201).json({ message: "User created successfully" });
+    if (results.length === 0) {
+      return res.status(404).json({ message: "User not found" });
     }
-  );
+
+    const user = results[0]; // Assuming there's only one user for a given email
+
+    // Generate a signed JWT token using the user's email
+
+    console.log("MY SECRET", process.env.TOKEN_SECRET);
+    const token = jwt.sign(
+      {
+        email: user.email,
+      },
+      process.env.TOKEN_SECRET,
+      {
+        expiresIn: "5hr",
+      }
+    );
+
+    console.log(jwt.decode(token, { complete: true }), "YEEEEEEEEEEEEEEEEE");
+    // Send the user information and the generated token in the response
+    return res.status(200).json({ user, token });
+  } catch (err) {
+    console.error("Error fetching user:", err);
+    return res.status(500).json({ error: "Error fetching user" });
+  }
 });
 
-UserDb.get("/users/:userid", (req, res) => {
+UserDb.get("/users/:userid", verifyToken, (req, res) => {
   const { userid } = req.params;
 
   const SELECT_USER_QUERY = `SELECT * FROM users WHERE userid = ?`;
@@ -42,28 +62,7 @@ UserDb.get("/users/:userid", (req, res) => {
   });
 });
 
-UserDb.get("/usersFromEmail/:useremail", (req, res) => {
-  const { useremail } = req.params;
-  console.log(useremail, "PLSSSSSS");
-
-  const SELECT_USER_QUERY = `SELECT * FROM users WHERE email = ?`;
-
-  pool.query(SELECT_USER_QUERY, [useremail], (err, results) => {
-    if (err) {
-      console.error("Error fetching user:", err);
-      return res.status(500).json({ error: "Error fetching user" });
-    }
-
-    if (results.length === 0) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    const user = results[0]; // Assuming there's only one user for a given userid
-    return res.status(200).json({ user });
-  });
-});
-
-UserDb.patch("/users/:userid", (req, res) => {
+UserDb.patch("/users/:userid", verifyToken, (req, res) => {
   const { userid } = req.params;
   const { name, email, image } = req.body;
 

@@ -1,9 +1,10 @@
 import { Router } from "express";
 import pool from "../Services/dbService.js";
 import cors from "cors";
+import { verifyToken } from "../Services/AuthService.js";
 const stockDbController = Router();
 
-stockDbController.get("/batches", async (req, res) => {
+stockDbController.get("/batches", verifyToken, async (req, res) => {
   try {
     const { page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
@@ -20,15 +21,17 @@ stockDbController.get("/batches", async (req, res) => {
   }
 });
 
-stockDbController.post("/batches", async (req, res) => {
+stockDbController.post("/batches", verifyToken, async (req, res) => {
   try {
-
-
-
-    const { batch_name, received_date, si_number, createdBy, received_goods_received_goods_id, items , formData} = req.body;
-
-
-
+    const {
+      batch_name,
+      received_date,
+      si_number,
+      createdBy,
+      received_goods_received_goods_id,
+      items,
+      formData,
+    } = req.body;
 
     // Start a transaction to ensure data consistency
     const connection = await pool.promise().getConnection();
@@ -38,13 +41,16 @@ stockDbController.post("/batches", async (req, res) => {
       // Insert the batch details
       const [batchResult] = await connection.query(
         "INSERT INTO Batches (batch_name, received_date, si_number, createdBy, received_goods_received_goods_id) VALUES (?, ?, ?, ?, ?)",
-        [batch_name, received_date, si_number, createdBy, received_goods_received_goods_id]
+        [
+          batch_name,
+          received_date,
+          si_number,
+          createdBy,
+          received_goods_received_goods_id,
+        ]
       );
 
-
       // Insert items associated with the batch
-
-      
 
       await connection.commit(); // Commit the transaction
       connection.release(); // Release the connection
@@ -63,7 +69,7 @@ stockDbController.post("/batches", async (req, res) => {
   }
 });
 
-stockDbController.get("/batches/:receivedGoodsId", (req, res) => {
+stockDbController.get("/batches/:receivedGoodsId", verifyToken, (req, res) => {
   const receivedGoodsId = req.params.receivedGoodsId;
   console.log(receivedGoodsId);
   pool.query(
@@ -80,7 +86,7 @@ stockDbController.get("/batches/:receivedGoodsId", (req, res) => {
   );
 });
 
-stockDbController.get("/allBatches", async (req, res) => {
+stockDbController.get("/allBatches", verifyToken, async (req, res) => {
   try {
     const sql = `
         SELECT b.batch_id, b.batch_name, b.received_date, b.si_number, t.type_name,
@@ -131,23 +137,19 @@ stockDbController.get("/allBatches", async (req, res) => {
   }
 });
 
-
-
-stockDbController.get("/batchAll", async (req, res) => {
+stockDbController.get("/batchAll", verifyToken, async (req, res) => {
   try {
-      const sql = `
+    const sql = `
           SELECT *
           FROM batches;`;
 
-      const [results] = await pool.promise().query(sql);
+    const [results] = await pool.promise().query(sql);
 
-      res.status(200).json(results);
+    res.status(200).json(results);
   } catch (error) {
-      console.error("Error fetching batches:", error);
-      res.status(500).json({ error: "Error fetching batches" });
+    console.error("Error fetching batches:", error);
+    res.status(500).json({ error: "Error fetching batches" });
   }
 });
-
-
 
 export default stockDbController;

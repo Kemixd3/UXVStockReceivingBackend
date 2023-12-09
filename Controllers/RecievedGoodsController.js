@@ -2,48 +2,56 @@ import { Router } from "express";
 import pool from "../Services/dbService.js";
 import cors from "cors";
 import getQuantity from "../Services/QuantityVal.js";
-
+import { verifyToken } from "../Services/AuthService.js";
 const ReceivedGoodsController = Router();
 //Endpoint to Post received-goods
-ReceivedGoodsController.post("/received-goods", async (req, res) => {
-  try {
-    const { received_date, purchase_order_id, Organization } = req.body;
-    console.log("sss",received_date, purchase_order_id);
+ReceivedGoodsController.post(
+  "/received-goods",
+  verifyToken,
+  async (req, res) => {
+    try {
+      const { received_date, purchase_order_id, Organization } = req.body;
+      console.log("sss", received_date, purchase_order_id);
 
-
-    if (purchase_order_id) {
-      //Check purchase_order_id exists in the purchase_order table
-      const checkQuery = `SELECT * FROM received_goods WHERE received_order_id = ?`;
-      const [rows] = await pool
-        .promise()
-        .query(checkQuery, [purchase_order_id]);
-
-      if (rows.length === 0) {
-        console.log("works");
-        //If purchase_order_id doesn't exist, proceed with insertion
-        const insertQuery = `INSERT INTO received_goods (received_date, purchase_order_id, Organization) VALUES (?, ?, ?)`;
-        await pool
+      if (purchase_order_id) {
+        //Check purchase_order_id exists in the purchase_order table
+        const checkQuery = `SELECT * FROM received_goods WHERE received_order_id = ?`;
+        const [rows] = await pool
           .promise()
-          .query(insertQuery, [received_date, purchase_order_id, Organization]);
+          .query(checkQuery, [purchase_order_id]);
 
-        res
-          .status(201)
-          .json({ message: "Received goods created successfully" });
+        if (rows.length === 0) {
+          console.log("works");
+          //If purchase_order_id doesn't exist, proceed with insertion
+          const insertQuery = `INSERT INTO received_goods (received_date, purchase_order_id, Organization) VALUES (?, ?, ?)`;
+          await pool
+            .promise()
+            .query(insertQuery, [
+              received_date,
+              purchase_order_id,
+              Organization,
+            ]);
+
+          res
+            .status(201)
+            .json({ message: "Received goods created successfully" });
+        } else {
+          //If purchase_order_id exists, return an error
+          res.status(400).json({ error: "purchase order already exists" });
+        }
       } else {
-        //If purchase_order_id exists, return an error
-        res.status(400).json({ error: "purchase order already exists" });
+        res.status(400).json({ error: "purchase_order_id is NULL" });
       }
-    } else {
-      res.status(400).json({ error: "purchase_order_id is NULL" });
+    } catch (error) {
+      console.error("Error creating received goods:", error);
+      res.status(500).json({ error: "Internal server error" });
     }
-  } catch (error) {
-    console.error("Error creating received goods:", error);
-    res.status(500).json({ error: "Internal server error" });
   }
-});
+);
 
 ReceivedGoodsController.get(
   "/received_goods_items/:batch_id/:si_number",
+  verifyToken,
   async (req, res) => {
     try {
       const { batch_id, si_number } = req.params;
@@ -84,6 +92,7 @@ ReceivedGoodsController.get(
 //Endpoint to handle GET requests for received goods using the purchase_order_id
 ReceivedGoodsController.get(
   "/received-goods/:purchase_order_id/:org?",
+  verifyToken,
   async (req, res) => {
     try {
       let { purchase_order_id, org } = req.params;
@@ -115,6 +124,7 @@ ReceivedGoodsController.get(
 // GET all batches with their associated received goods items
 ReceivedGoodsController.get(
   "/batches-with-received-goods",
+  verifyToken,
   async (req, res) => {
     try {
       const sql = `
@@ -182,122 +192,125 @@ ReceivedGoodsController.get(
     } catch (error) {
       console.error("Error fetching batches with received goods items:", error);
       res
-      .status(500)
-      .json({ error: "Error fetching batches with received goods items" });
+        .status(500)
+        .json({ error: "Error fetching batches with received goods items" });
     }
   }
-  );
-  
-  ReceivedGoodsController.post("/received_goods_items", async (req, res) => {
+);
+
+ReceivedGoodsController.post(
+  "/received_goods_items",
+  verifyToken,
+  async (req, res) => {
     try {
-    // Extract data from the request body
-    const { batch_id, receivedGoodsItems } = req.body;
-    console.log(batch_id, receivedGoodsItems);
-    if (receivedGoodsItems.length != 0){
-      const totalQuantity = receivedGoodsItems.reduce((sum, item) => {
-        // Use unary plus (+) to convert string to number
-        const quantity = +item.Quantity;
-        return sum + quantity;
-      }, 0);
-      
-      console.log("totalQuantity",totalQuantity);
-      const CheckQuantity = await getQuantity(
-        receivedGoodsItems[0].received_goods_id,
-        receivedGoodsItems[0].SI_number,
-        totalQuantity,
-        -1
+      // Extract data from the request body
+      const { batch_id, receivedGoodsItems } = req.body;
+      console.log(batch_id, receivedGoodsItems);
+      if (receivedGoodsItems.length != 0) {
+        const totalQuantity = receivedGoodsItems.reduce((sum, item) => {
+          // Use unary plus (+) to convert string to number
+          const quantity = +item.Quantity;
+          return sum + quantity;
+        }, 0);
+
+        console.log("totalQuantity", totalQuantity);
+        const CheckQuantity = await getQuantity(
+          receivedGoodsItems[0].received_goods_id,
+          receivedGoodsItems[0].SI_number,
+          totalQuantity,
+          -1
         );
         console.log(CheckQuantity);
         if (CheckQuantity.isAboveOrderQuantity == false) {
-          
-          
-          
-          
           // Validate the presence of required parameters
           if (
             !batch_id ||
             !receivedGoodsItems ||
             !Array.isArray(receivedGoodsItems)
-            ) {
-              return res.status(400).json({ error: "Missing or invalid parameters" });
-            }
-            
-            // Get a connection from the pool
-            const connection = await pool.promise().getConnection();
-            
-            try {
-              // Begin a transaction
-              await connection.beginTransaction();
-              
-              for (const item of receivedGoodsItems) {
-                const { Name, Quantity, SI_number, createdBy, received_goods_id } =
-                item;
-                
-                // Insert item into received_goods_items table
-                const insertItemQuery =
-                "INSERT INTO received_goods_items (Name, Quantity, SI_number, createdBy, received_goods_id) VALUES (?, ?, ?, ?, ?)";
-                const [insertItemResult] = await connection.query(insertItemQuery, [
-                  Name,
-                  Quantity,
-                  SI_number,
-                  createdBy,
-                  received_goods_id,
-                ]);
-                
-                const receivedItemId = insertItemResult.insertId;
-                
-                // Insert into join table batches_has_received_goods_items
-                const insertIntoJoinTableQuery =
-                "INSERT INTO batches_has_received_goods_items (batches_batch_id, received_goods_items_received_item_id) VALUES (?, ?)";
-                await connection.query(insertIntoJoinTableQuery, [
-                  batch_id,
-                  receivedItemId,
-                ]);
-              }
-              
-              // Commit the transaction
-              await connection.commit();
-              
-              res.status(201).json({
-                message: "Received goods items added to the batch successfully",
-              });
-            } catch (error) {
-              // Rollback transaction in case of an error
-              await connection.rollback();
-              throw error;
-            } finally {
-              // Release the connection back to the pool
-              connection.release();
-            }
-          }else {
-            console.log(CheckQuantity);
-            res.status(500).json({
-              error: "Limit reached, Total: " + CheckQuantity.totalQuantity,
-            });
-            
-          } 
-          }else {
-            res.status(500).json({
-              error: "No item Posted",
-            });
+          ) {
+            return res
+              .status(400)
+              .json({ error: "Missing or invalid parameters" });
           }
-        } catch (error) {
-          console.error("Error adding received goods items:", error);
-          res.status(500).json({ error: "Internal server error" });
-        }
-  });
-      
-      ReceivedGoodsController.put(
-        "/received_goods_items/:received_item_id",
-        async (req, res) => {
+
+          // Get a connection from the pool
+          const connection = await pool.promise().getConnection();
+
           try {
-            const receivedItemId = req.params.received_item_id;
-            const {
-              Name,
-              Quantity,
-              SI_number,
-              createdBy,
-              QuantityPO,
+            // Begin a transaction
+            await connection.beginTransaction();
+
+            for (const item of receivedGoodsItems) {
+              const {
+                Name,
+                Quantity,
+                SI_number,
+                createdBy,
+                received_goods_id,
+              } = item;
+
+              // Insert item into received_goods_items table
+              const insertItemQuery =
+                "INSERT INTO received_goods_items (Name, Quantity, SI_number, createdBy, received_goods_id) VALUES (?, ?, ?, ?, ?)";
+              const [insertItemResult] = await connection.query(
+                insertItemQuery,
+                [Name, Quantity, SI_number, createdBy, received_goods_id]
+              );
+
+              const receivedItemId = insertItemResult.insertId;
+
+              // Insert into join table batches_has_received_goods_items
+              const insertIntoJoinTableQuery =
+                "INSERT INTO batches_has_received_goods_items (batches_batch_id, received_goods_items_received_item_id) VALUES (?, ?)";
+              await connection.query(insertIntoJoinTableQuery, [
+                batch_id,
+                receivedItemId,
+              ]);
+            }
+
+            // Commit the transaction
+            await connection.commit();
+
+            res.status(201).json({
+              message: "Received goods items added to the batch successfully",
+            });
+          } catch (error) {
+            // Rollback transaction in case of an error
+            await connection.rollback();
+            throw error;
+          } finally {
+            // Release the connection back to the pool
+            connection.release();
+          }
+        } else {
+          console.log(CheckQuantity);
+          res.status(500).json({
+            error: "Limit reached, Total: " + CheckQuantity.totalQuantity,
+          });
+        }
+      } else {
+        res.status(500).json({
+          error: "No item Posted",
+        });
+      }
+    } catch (error) {
+      console.error("Error adding received goods items:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+);
+
+ReceivedGoodsController.put(
+  "/received_goods_items/:received_item_id",
+  async (req, res) => {
+    try {
+      const receivedItemId = req.params.received_item_id;
+      const {
+        Name,
+        Quantity,
+        SI_number,
+        createdBy,
+        QuantityPO,
         received_goods_id,
         received_item_id,
       } = req.body;
@@ -363,6 +376,7 @@ ReceivedGoodsController.get(
 
 ReceivedGoodsController.delete(
   "/received_goods_items/:received_item_id",
+  verifyToken,
   async (req, res) => {
     try {
       // Extract received_item_id from the request parameters
