@@ -33,12 +33,11 @@ stockDbController.post("/batches", verifyToken, async (req, res) => {
       formData,
     } = req.body;
 
-    // Start a transaction to ensure data consistency
+    //Start transaction to prevent errors
     const connection = await pool.promise().getConnection();
     await connection.beginTransaction();
 
     try {
-      // Insert the batch details
       const [batchResult] = await connection.query(
         "INSERT INTO Batches (batch_name, received_date, si_number, createdBy, received_goods_received_goods_id) VALUES (?, ?, ?, ?, ?)",
         [
@@ -50,15 +49,15 @@ stockDbController.post("/batches", verifyToken, async (req, res) => {
         ]
       );
 
-      // Insert items associated with the batch
+      //Insert items associated with batch
 
-      await connection.commit(); // Commit the transaction
-      connection.release(); // Release the connection
+      await connection.commit(); //Commit transaction
+      connection.release(); //Release the connection
 
       res.status(201).json({ message: "Batch created successfully" });
     } catch (error) {
-      await connection.rollback(); // Rollback in case of any errors
-      connection.release(); // Release the connection
+      await connection.rollback(); //Rollback in case of errors
+      connection.release(); //Release connection
 
       console.error("Error creating batch:", error);
       res.status(500).json({ error: "Error creating batch" });
@@ -69,22 +68,28 @@ stockDbController.post("/batches", verifyToken, async (req, res) => {
   }
 });
 
-stockDbController.get("/batches/:receivedGoodsId", verifyToken, (req, res) => {
-  const receivedGoodsId = req.params.receivedGoodsId;
-  console.log(receivedGoodsId);
-  pool.query(
-    "SELECT * FROM batches WHERE received_goods_received_goods_id = ?",
-    [receivedGoodsId],
-    (err, results) => {
-      if (err) {
-        console.error("Error fetching batches:", err);
-        res.status(500).json({ error: "Error fetching batches" });
-        return;
+stockDbController.get(
+  "/batches/:receivedGoodsId/:si_number",
+  verifyToken,
+  (req, res) => {
+    const receivedGoodsId = req.params.receivedGoodsId;
+    const siNumber = req.params.si_number;
+
+    //filter batches by both received_goods_received_goods_id and si_number
+    pool.query(
+      "SELECT * FROM batches WHERE received_goods_received_goods_id = ? AND si_number = ?",
+      [receivedGoodsId, siNumber],
+      (err, results) => {
+        if (err) {
+          console.error("Error fetching batches:", err);
+          res.status(500).json({ error: "Error fetching batches" });
+          return;
+        }
+        res.status(200).json(results);
       }
-      res.status(200).json(results);
-    }
-  );
-});
+    );
+  }
+);
 
 stockDbController.get("/allBatches", verifyToken, async (req, res) => {
   try {

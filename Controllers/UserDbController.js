@@ -2,14 +2,13 @@ import { Router } from "express";
 import pool from "../Services/dbService.js";
 import cors from "cors";
 const UserDb = Router();
-import axios from "axios";
 import { verifyToken } from "../Services/AuthService.js";
 import jwt from "jsonwebtoken";
 UserDb.get("/usersFromEmail/:useremail", async (req, res) => {
   const { useremail } = req.params;
 
   try {
-    // Fetch the user data based on the email from the database
+    //Fetch user data based on the email from the database
     const SELECT_USER_QUERY = `SELECT * FROM users WHERE email = ?`;
     const [userResults] = await pool
       .promise()
@@ -20,17 +19,16 @@ UserDb.get("/usersFromEmail/:useremail", async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Extract the token from the request headers or wherever it's stored
-    const token = req.headers.authorization?.split(" ")[1]; // Extract token from Authorization header
+    const token = req.headers.authorization?.split(" ")[1]; //Get token from Authorization header
 
     if (!token) {
       return res.status(401).json({ message: "Token not found" });
     }
 
-    // Verify the token to check if it's valid or expired
+    //Verify the token to check if it's valid or expired
     jwt.verify(token, process.env.TOKEN_SECRET, async (err, decoded) => {
       if (err) {
-        // Token is invalid or expired, generate a new token for the user
+        //Token is invalid or expired, generate a new token for the user
         const newToken = jwt.sign(
           {
             email: useremail,
@@ -45,7 +43,7 @@ UserDb.get("/usersFromEmail/:useremail", async (req, res) => {
           .status(200)
           .json({ message: "New token generated", user, token: newToken });
       } else {
-        // Token is valid
+        //Token valid
         return res.status(200).json({ message: "Token is valid", user });
       }
     });
