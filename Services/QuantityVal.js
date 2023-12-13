@@ -13,23 +13,18 @@ async function getQuantity(
 
     const query = `
       SELECT 
-      received_goods_items.SI_number,
-      received_goods_items.received_goods_id,
-      COALESCE(SUM(received_goods_items.Quantity), 0) AS totalQuantity,
-      COALESCE(
-          (
-              SELECT SUM(purchase_order_items.Quantity) 
-              FROM purchase_order_items 
-              WHERE received_goods_items.SI_number = purchase_order_items.SI_number
-              LIMIT 1
-          ), 0
-      ) AS orderQuantity
-  FROM received_goods_items
-  WHERE received_goods_items.received_goods_id = ? 
-      AND received_goods_items.SI_number = ?
-      AND received_goods_items.received_item_id != ? -- Exclude the specific received_item_id
-  GROUP BY received_goods_items.SI_number, received_goods_items.received_goods_id;
-  
+        COALESCE(SUM(rgi.Quantity), 0) AS totalQuantity,
+        COALESCE((
+          SELECT SUM(poi.Quantity) 
+          FROM purchase_order_items poi
+          WHERE rgi.SI_number = poi.SI_number
+          LIMIT 1
+        ), 0) AS orderQuantity
+      FROM received_goods_items rgi
+      WHERE rgi.received_goods_id = ? 
+        AND rgi.SI_number = ?
+        AND rgi.received_item_id != ? 
+      GROUP BY rgi.SI_number, rgi.received_goods_id;
     `;
 
     const [result] = await pool
@@ -37,23 +32,33 @@ async function getQuantity(
       .query(query, [received_goods_id, si_number, received_item_id]);
 
     if (result.length > 0) {
-      var { totalQuantity, orderQuantity } = result[0];
+      const { totalQuantity, orderQuantity } = result[0];
 
-      // Convert to integers
-      totalQuantity = parseInt(totalQuantity, 10);
-      orderQuantity = parseInt(orderQuantity, 10);
+      const parsedTotalQuantity = parseInt(totalQuantity, 10);
+      const parsedOrderQuantity = parseInt(orderQuantity, 10);
 
-      totalQuantity = totalQuantity + quantity;
+      const updatedTotalQuantity = parsedTotalQuantity + quantity;
+      const isAboveOrderQuantity = updatedTotalQuantity > parsedOrderQuantity;
 
-      const isAboveOrderQuantity = totalQuantity > orderQuantity;
-
-      return { totalQuantity, orderQuantity, isAboveOrderQuantity };
+      return {
+        totalQuantity: updatedTotalQuantity,
+        orderQuantity: parsedOrderQuantity,
+        isAboveOrderQuantity,
+      };
     } else {
-      throw new Error("No matching items found for the provided parameters");
+      //Handle case where no matching items are found or result is empty
+      const isAboveOrderQuantity = quantity > 0;
+
+      return {
+        totalQuantity: quantity,
+        orderQuantity: 0,
+        isAboveOrderQuantity,
+      };
     }
   } catch (error) {
     console.error("Error fetching matching items:", error);
     throw error;
   }
 }
+
 export default getQuantity;

@@ -9,7 +9,7 @@ stockDbController.get("/batches", verifyToken, async (req, res) => {
     const { page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
 
-    // Fetch paginated batches from the database
+    //Fetch paginated batches from database
     const [batches, fields] = await pool
       .promise()
       .query("SELECT * FROM Batches LIMIT ?, ?", [offset, parseInt(limit)]);
@@ -56,8 +56,8 @@ stockDbController.post("/batches", verifyToken, async (req, res) => {
 
       res.status(201).json({ message: "Batch created successfully" });
     } catch (error) {
-      await connection.rollback(); //Rollback in case of errors
-      connection.release(); //Release connection
+      await connection.rollback(); //Rollback
+      connection.release(); //Release
 
       console.error("Error creating batch:", error);
       res.status(500).json({ error: "Error creating batch" });
@@ -132,7 +132,7 @@ stockDbController.get("/allBatches", verifyToken, async (req, res) => {
       return acc;
     }, []);
 
-    // Send the grouped results
+    //Send results
     res.status(200).json(groupedBatches);
   } catch (error) {
     console.error("Error fetching and organizing batches with items:", error);

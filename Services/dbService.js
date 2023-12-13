@@ -24,8 +24,6 @@ const dbConfig = {
   multipleStatements: true,
 };
 
-//console.log(dbConfig);
-
 const pool = await mysql.createPool(dbConfig);
 
 export default pool;

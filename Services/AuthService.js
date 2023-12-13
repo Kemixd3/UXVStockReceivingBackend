@@ -36,7 +36,6 @@ async function verifyToken(req, res, next) {
 
         if (!allowedUser || allowedUser.email !== decoded.email) {
           console.log("Unauthorized user");
-          console.log("2");
           return res.status(403).json({ message: "Forbidden" });
         }
 

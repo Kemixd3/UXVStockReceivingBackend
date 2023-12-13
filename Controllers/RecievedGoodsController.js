@@ -1,9 +1,9 @@
 import { Router } from "express";
 import pool from "../Services/dbService.js";
-import cors from "cors";
 import getQuantity from "../Services/QuantityVal.js";
 import { verifyToken } from "../Services/AuthService.js";
 const ReceivedGoodsController = Router();
+
 //Endpoint to Post received-goods
 ReceivedGoodsController.post(
   "/received-goods",
@@ -11,7 +11,6 @@ ReceivedGoodsController.post(
   async (req, res) => {
     try {
       const { received_date, purchase_order_id, Organization } = req.body;
-      console.log("sss", received_date, purchase_order_id);
 
       if (purchase_order_id) {
         //Check purchase_order_id exists in the purchase_order table
@@ -21,7 +20,6 @@ ReceivedGoodsController.post(
           .query(checkQuery, [purchase_order_id]);
 
         if (rows.length === 0) {
-          console.log("works");
           //If purchase_order_id doesn't exist, proceed with insertion
           const insertQuery = `INSERT INTO received_goods (received_date, purchase_order_id, Organization) VALUES (?, ?, ?)`;
           await pool
@@ -55,7 +53,6 @@ ReceivedGoodsController.get(
   async (req, res) => {
     try {
       const { batch_id, si_number } = req.params;
-      console.log(batch_id, si_number);
       //Validate parameters
       if (!batch_id || !si_number) {
         return res.status(400).json({ error: "Missing required parameters" });
@@ -121,7 +118,7 @@ ReceivedGoodsController.get(
   }
 );
 
-// GET all batches with their associated received goods items
+//GET all batches with their associated received goods items
 ReceivedGoodsController.get(
   "/batches-with-received-goods",
   verifyToken,
@@ -137,7 +134,7 @@ ReceivedGoodsController.get(
 
       const [results] = await pool.promise().query(sql);
 
-      // Group batches with their received goods items
+      //Group batches with their received goods items
       const groupedBatches = results.reduce((acc, row) => {
         const {
           batch_id,
@@ -187,7 +184,6 @@ ReceivedGoodsController.get(
         return acc;
       }, []);
 
-      // Send the grouped results
       res.status(200).json(groupedBatches);
     } catch (error) {
       console.error("Error fetching batches with received goods items:", error);
@@ -203,26 +199,23 @@ ReceivedGoodsController.post(
   verifyToken,
   async (req, res) => {
     try {
-      // Extract data from the request body
       const { batch_id, receivedGoodsItems } = req.body;
-      console.log(batch_id, receivedGoodsItems);
+
       if (receivedGoodsItems.length != 0) {
         const totalQuantity = receivedGoodsItems.reduce((sum, item) => {
-          // Use unary plus (+) to convert string to number
+          //Using unary plus + to convert string to number
           const quantity = +item.Quantity;
           return sum + quantity;
         }, 0);
 
-        console.log("totalQuantity", totalQuantity);
         const CheckQuantity = await getQuantity(
           receivedGoodsItems[0].received_goods_id,
           receivedGoodsItems[0].SI_number,
           totalQuantity,
           -1
         );
-        console.log(CheckQuantity);
         if (CheckQuantity.isAboveOrderQuantity == false) {
-          // Validate the presence of required parameters
+          //Validate presence of parameters
           if (
             !batch_id ||
             !receivedGoodsItems ||
@@ -233,11 +226,9 @@ ReceivedGoodsController.post(
               .json({ error: "Missing or invalid parameters" });
           }
 
-          // Get a connection from the pool
           const connection = await pool.promise().getConnection();
 
           try {
-            // Begin a transaction
             await connection.beginTransaction();
 
             for (const item of receivedGoodsItems) {
@@ -249,7 +240,6 @@ ReceivedGoodsController.post(
                 received_goods_id,
               } = item;
 
-              // Insert item into received_goods_items table
               const insertItemQuery =
                 "INSERT INTO received_goods_items (Name, Quantity, SI_number, createdBy, received_goods_id) VALUES (?, ?, ?, ?, ?)";
               const [insertItemResult] = await connection.query(
@@ -259,7 +249,6 @@ ReceivedGoodsController.post(
 
               const receivedItemId = insertItemResult.insertId;
 
-              // Insert into join table batches_has_received_goods_items
               const insertIntoJoinTableQuery =
                 "INSERT INTO batches_has_received_goods_items (batches_batch_id, received_goods_items_received_item_id) VALUES (?, ?)";
               await connection.query(insertIntoJoinTableQuery, [
@@ -268,22 +257,21 @@ ReceivedGoodsController.post(
               ]);
             }
 
-            // Commit the transaction
+            //Commit
             await connection.commit();
 
             res.status(201).json({
               message: "Received goods items added to the batch successfully",
             });
           } catch (error) {
-            // Rollback transaction in case of an error
+            //Rollback
             await connection.rollback();
             throw error;
           } finally {
-            // Release the connection back to the pool
+            //Release
             connection.release();
           }
         } else {
-          console.log(CheckQuantity);
           res.status(500).json({
             error: "Limit reached, Total: " + CheckQuantity.totalQuantity,
           });
@@ -322,21 +310,20 @@ ReceivedGoodsController.put(
         received_item_id
       );
       if (CheckQuantity.isAboveOrderQuantity == false) {
-        // Validate the presence of required parameters
+        //Validate
         if (!Name || !Quantity || !SI_number || !createdBy) {
           return res
             .status(400)
             .json({ error: "Missing or invalid parameters" });
         }
 
-        // Get a connection from the pool
+        //make a connection to pool
         const connection = await pool.promise().getConnection();
 
         try {
-          // Begin a transaction
           await connection.beginTransaction();
 
-          // Update item in received_goods_items table
+          //Update item in received_goods_items
           const updateItemQuery =
             "UPDATE received_goods_items SET Name = ?, Quantity = ?, SI_number = ?, createdBy = ? WHERE received_item_id = ?";
           await connection.query(updateItemQuery, [
@@ -347,22 +334,21 @@ ReceivedGoodsController.put(
             receivedItemId,
           ]);
 
-          // Commit the transaction
+          //Commit
           await connection.commit();
 
           res
             .status(200)
             .json({ message: "Received goods item updated successfully" });
         } catch (error) {
-          // Rollback transaction in case of an error
+          //Rollback
           await connection.rollback();
           throw error;
         } finally {
-          // Release the connection back to the pool
+          //Release
           connection.release();
         }
       } else {
-        console.log(CheckQuantity);
         res.status(500).json({
           error: "Limit reached, Total: " + CheckQuantity.totalQuantity,
         });
@@ -379,36 +365,36 @@ ReceivedGoodsController.delete(
   verifyToken,
   async (req, res) => {
     try {
-      // Extract received_item_id from the request parameters
+      //get received_item_id from the request parameters
       const { received_item_id } = req.params;
 
-      // Validate the presence of required parameter
+      //Validate
       if (!received_item_id) {
         return res
           .status(400)
           .json({ error: "Missing received_item_id parameter" });
       }
 
-      // Begin a transaction to ensure atomicity
+      //Begin a transaction after making connection to pool
       const connection = await pool.promise().getConnection();
       await connection.beginTransaction();
 
       try {
-        // Delete entry from batches_has_received_goods_items
+        //Delete batch entry
         const deleteFromJoinTableQuery =
           "DELETE FROM batches_has_received_goods_items WHERE received_goods_items_received_item_id = ?";
         await connection.query(deleteFromJoinTableQuery, [received_item_id]);
 
-        // Delete received_goods_items entry
+        //Delete received_goods_items entry
         const deleteItemQuery =
           "DELETE FROM received_goods_items WHERE received_item_id = ?";
         const [deleteResult] = await connection.query(deleteItemQuery, [
           received_item_id,
         ]);
 
-        // Check if the delete operation was successful
+        //Check if delete operation was successful
         if (deleteResult.affectedRows > 0) {
-          // Commit the transaction
+          //Commit
           await connection.commit();
           res
             .status(200)
@@ -417,11 +403,11 @@ ReceivedGoodsController.delete(
           throw new Error("Received goods item not found");
         }
       } catch (error) {
-        // Rollback transaction in case of an error
+        //Rollback
         await connection.rollback();
         throw error;
       } finally {
-        // Release the connection back to the pool
+        //Release
         connection.release();
       }
     } catch (error) {

@@ -1,10 +1,8 @@
 import { Router } from "express";
 import pool from "../Services/dbService.js";
-import cors from "cors";
 import { verifyToken } from "../Services/AuthService.js";
 
 const PurchaseOrderRoutes = Router();
-//const purchaseOrder = require("../models/purchaseOrder");
 PurchaseOrderRoutes.get("/purchase-orders", verifyToken, async (req, res) => {
   const { page = 1, limit = 10, org } = req.query;
   const offset = (page - 1) * limit;
@@ -49,22 +47,16 @@ PurchaseOrderRoutes.get(
   }
 );
 
-//Skal slettes
+//Currently not used
 PurchaseOrderRoutes.post("/purchase-order-items", verifyToken, (req, res) => {
-  const { orderId, items } = req.body; // Assuming the request body contains orderId and items array
+  const { orderId, items } = req.body;
 
   if (!orderId || !items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: "Invalid request body" });
   }
 
   const insertQueries = items.map((item) => {
-    return [
-      item.Name,
-      item.Quantity,
-      item.SI_number,
-      item.type_id,
-      orderId, // Link the purchase order ID to each item
-    ];
+    return [item.Name, item.Quantity, item.SI_number, item.type_id, orderId];
   });
 
   const sql = `INSERT INTO purchase_order_items (Name, Quantity, SI_number, order_id) VALUES ?`;
