@@ -11,10 +11,9 @@ ReceivedGoodsController.post(
   async (req, res) => {
     try {
       const { received_date, purchase_order_id, Organization } = req.body;
-
       if (purchase_order_id) {
         //Check purchase_order_id exists in the purchase_order table
-        const checkQuery = `SELECT * FROM received_goods WHERE received_order_id = ?`;
+        const checkQuery = `SELECT * FROM received_goods WHERE received_goods_id = ?`;
         const [rows] = await pool
           .promise()
           .query(checkQuery, [purchase_order_id]);
