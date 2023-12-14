@@ -198,8 +198,7 @@ ReceivedGoodsController.post(
   verifyToken,
   async (req, res) => {
     try {
-      const { batch_id, receivedGoodsItems } = req.body;
-
+      const { batch_id, receivedGoodsItems, purchase_order_id } = req.body;
       if (receivedGoodsItems.length != 0) {
         const totalQuantity = receivedGoodsItems.reduce((sum, item) => {
           //Using unary plus + to convert string to number
@@ -211,8 +210,10 @@ ReceivedGoodsController.post(
           receivedGoodsItems[0].received_goods_id,
           receivedGoodsItems[0].SI_number,
           totalQuantity,
-          -1
+          -1,
+          purchase_order_id
         );
+
         if (CheckQuantity.isAboveOrderQuantity == false) {
           //Validate presence of parameters
           if (
@@ -300,13 +301,15 @@ ReceivedGoodsController.put(
         QuantityPO,
         received_goods_id,
         received_item_id,
+        purchase_order_id,
       } = req.body;
 
       const CheckQuantity = await getQuantity(
         received_goods_id,
         SI_number,
         Quantity,
-        received_item_id
+        received_item_id,
+        purchase_order_id
       );
       if (CheckQuantity.isAboveOrderQuantity == false) {
         //Validate
