@@ -21,12 +21,13 @@ https://semesterapi.azurewebsites.net
 3. npm install
 
 4. Set up environment variables:
-   Create a .env file in the root directory of the project and add the following variables:
-   DB_HOST="<your_db_host>" (MySQL host name)
-   DB_USER="<your_db_user>" (MySQL user name)
-   DB_PASSWORD="<your_db_password>" (MySQL database password)
-   DB_DATABASE="<your_db_name>" (MySQL database name)
-   TOKEN_SECRET="<your_token_secret>" (Any value longer than 20)
+
+- Create a .env file in the root directory of the project and add the following variables:
+- DB_HOST="<your_db_host>" (MySQL host name)
+- DB_USER="<your_db_user>" (MySQL user name)
+- DB_PASSWORD="<your_db_password>" (MySQL database password)
+- DB_DATABASE="<your_db_name>" (MySQL database name)
+- TOKEN_SECRET="<your_token_secret>" (Any value longer than 20)
 
 Fill in the values for the variables based on your database configuration and secret token.
 
