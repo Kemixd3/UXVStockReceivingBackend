@@ -44,6 +44,12 @@ npm start
 ## Testing the API
 
 You can test the API using tools like Postman or cURL by sending requests to the appropriate endpoints.
+To use protected endponints and send request directly yo API:
+
+1. Obtain JWT token from session storage after login.
+2. Use that JWT token in "Authorization" tab in Postman and add a new type "Bearer Token" field with the copied JWT token
+3. Call the specific endpoint after using the JWT token in bearer field to an endpoint like: "https://semesterapi.azurewebsites.net/batches"
+   Congratz! You have successfully called a endpoint directly.
 
 ## More information
 
