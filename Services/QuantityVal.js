@@ -30,7 +30,7 @@ async function getQuantity(
       FROM received_goods_items rgi
       WHERE rgi.received_goods_id = ? 
         AND rgi.SI_number = ?
-        AND rgi.received_item_id = ? 
+     
       GROUP BY rgi.SI_number, rgi.received_goods_id;
     `;
     const [result] = await pool
@@ -41,6 +41,8 @@ async function getQuantity(
         si_number,
         received_item_id,
       ]);
+
+    console.log(result);
 
     if (result.length <= 0) {
       const query = `
@@ -77,9 +79,9 @@ async function getQuantity(
 
     if (result.length > 0) {
       const { totalQuantity, orderQuantity } = result[0];
-      const parsedTotalQuantity = parseInt(totalQuantity, 10);
-      const parsedOrderQuantity = parseInt(orderQuantity, 10);
-      const isAboveOrderQuantity = parsedTotalQuantity >= parsedOrderQuantity;
+      const parsedTotalQuantity = parseInt(totalQuantity) + quantity;
+      const parsedOrderQuantity = parseInt(orderQuantity);
+      const isAboveOrderQuantity = parsedTotalQuantity > parsedOrderQuantity;
       return {
         totalQuantity: parsedTotalQuantity,
         orderQuantity: parsedOrderQuantity,
@@ -94,7 +96,6 @@ async function getQuantity(
     } else {
       //Handle case where no matching items are found or result is empty
       const isAboveOrderQuantity = quantity > 0;
-
       return {
         totalQuantity: quantity,
         orderQuantity: 0,
